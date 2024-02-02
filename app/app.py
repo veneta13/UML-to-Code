@@ -25,5 +25,4 @@ with gr.Blocks() as app:
     btn = gr.Button("Run")
     btn.click(fn=process_image, inputs=image, outputs=output)
 
-
 app.launch()

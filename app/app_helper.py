@@ -2,7 +2,9 @@ import cv2
 import numpy as np
 import pytesseract
 
-pytesseract.pytesseract.tesseract_cmd = (r'D:\Work\Uni\Artificial_intelligence\project\UML-to-Code\tesseract\tesseract.exe')
+pytesseract.pytesseract.tesseract_cmd = (
+    r'D:\Work\Uni\Artificial_intelligence\project\UML-to-Code\tesseract\tesseract.exe')
+
 
 def get_class_text(image):
     def segment(image):
