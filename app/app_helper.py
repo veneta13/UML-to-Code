@@ -60,20 +60,21 @@ def get_class_text(image):
         return segmented_regions
 
     def get_parameters(text):
-        class_params = {}
+        class_params = []
 
         text = text.splitlines()
         text = [line for line in text if line != '']
 
-        class_params['name'] = text[0]
-        class_params['attributes'] = []
-        class_params['methods'] = []
-
         for field in text:
+            if '(' not in field and '+' not in field:
+                class_params.append({})
+                class_params[-1]['name'] = field
+                class_params[-1]['attributes'] = []
+                class_params[-1]['methods'] = []
             if field[0] == '+':
-                class_params['attributes'].append(field[1:])
+                class_params[-1]['attributes'].append(field[1:])
             elif '(' in field:
-                class_params['methods'].append(field)
+                class_params[-1]['methods'].append(field)
 
         return class_params
 
@@ -87,18 +88,21 @@ def get_class_text(image):
     return get_parameters(text)
 
 
-def build_prompt(class_params):
-    prompt = (f"Write a Python class with name:"
-              f"{class_params['name']}, attributes: "
-              f"{','.join(class_params['attributes'])} and methods: "
-              f"{','.join(class_params['methods'])},"
-              f"only filling the constructor and leaving the other methods with pass.")
+def build_prompt(all_class_params):
+    prompt = ''
+
+    for class_params in all_class_params:
+        prompt += (f"Write a Python class with name:"
+                   f"{class_params['name']}, attributes: "
+                   f"{','.join(class_params['attributes'])} and methods: "
+                   f"{','.join(class_params['methods'])},"
+                   f"only filling the constructor and leaving the other methods with pass.")
 
     return prompt
 
 
 def generate_code(prompt):
-    prompt_template = f'''Below is an instruction that describes a task. Write a response that appropriately completes the request.
+    prompt_template = f'''Below is an instruction that describes a task to create Python classes. Generate 1 or more classes to fulfill the request.
 
     ### Instruction:
     {prompt}
