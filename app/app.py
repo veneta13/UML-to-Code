@@ -1,11 +1,13 @@
 import os
 
 import gradio as gr
-from app_helper import get_class_text
+from app_helper import get_class_text, build_prompt, generate_code
 
 
 def process_image(image):
-    return get_class_text(image)
+    class_text = get_class_text(image)
+    prompt = build_prompt(class_text)
+    return generate_code(prompt)
 
 
 with gr.Blocks() as app:

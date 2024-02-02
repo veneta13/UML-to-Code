@@ -2,6 +2,16 @@ import cv2
 import numpy as np
 import pytesseract
 
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+
+model_name_or_path = "TheBloke/Mistral-7B-Code-16K-qlora-GPTQ"
+model = AutoModelForCausalLM.from_pretrained(model_name_or_path,
+                                             device_map="auto",
+                                             trust_remote_code=False,
+                                             revision="main")
+
+tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=True)
+
 pytesseract.pytesseract.tesseract_cmd = (
     r'D:\Work\Uni\Artificial_intelligence\project\UML-to-Code\tesseract\tesseract.exe')
 
@@ -49,10 +59,63 @@ def get_class_text(image):
         segmented_regions.pop(0)  # remove the whole diagram
         return segmented_regions
 
+    def get_parameters(text):
+        class_params = {}
+
+        text = text.splitlines()
+        text = [line for line in text if line != '']
+
+        class_params['name'] = text[0]
+        class_params['attributes'] = []
+        class_params['methods'] = []
+
+        for field in text:
+            if field[0] == '+':
+                class_params['attributes'].append(field[1:])
+            elif '(' in field:
+                class_params['methods'].append(field)
+
+        return class_params
+
     text = ''
     segmented_regions = segment(image)
     for region in segmented_regions:
         for (x, y, w, h) in region:
             cropped_image = image[y:y + h, x:x + w]
             text += pytesseract.image_to_string(cropped_image) + '\n'
-    return text
+
+    return get_parameters(text)
+
+
+def build_prompt(class_params):
+    prompt = (f"Write a Python class with name:"
+              f"{class_params['name']}, attributes: "
+              f"{','.join(class_params['attributes'])} and methods: "
+              f"{','.join(class_params['methods'])},"
+              f"only filling the constructor and leaving the other methods with pass.")
+
+    return prompt
+
+
+def generate_code(prompt):
+    prompt_template = f'''Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+    ### Instruction:
+    {prompt}
+
+    ### Response:
+    '''
+
+    pipe = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        max_new_tokens=512,
+        do_sample=True,
+        temperature=0.7,
+        top_p=0.95,
+        top_k=40,
+        repetition_penalty=1.1
+    )
+
+    return pipe(prompt_template)[0]['generated_text'].split('Response:\n')[-1]
